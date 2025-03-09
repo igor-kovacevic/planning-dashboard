@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Planning Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <div class="sidebar">
+            <h2>Planning</h2>
+            <div class="epics">
+                <!-- Epics will be loaded dynamically -->
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="header">
+                <h2>Resources</h2>
+                <input type="text" id="resource-search" placeholder="Search resources..." />
+                <div class="dropdown">
+                    <button class="dropbtn">Actions</button>
+                    <div class="dropdown-content">
+                        <a href="#" id="export-csv">Export</a>
+                        <a href="#" id="load-assignments">Load</a>
+                    </div>
+                </div>
+            </div>
+            <div class="resources">
+                <!-- Resources will be loaded dynamically -->
+            </div>
+            <div class="overview">
+                <div class="teams">
+                    <h3>Teams</h3>
+                    <!-- Teams will be populated dynamically -->
+                </div>
+                <div class="details">
+                    <!-- Details will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

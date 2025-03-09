@@ -1,0 +1,71 @@
+{
+    "epics": [
+      {
+        "id": "e1",
+        "title": "Epic 1",
+        "description": "Enhance user authentication system",
+        "url": "https://example.com/epic1",
+        "effortDevelopment": 7,
+        "effortAnalysis": 3,
+        "priority": "High",
+        "team": "Team A"
+      },
+      {
+        "id": "e2",
+        "title": "Epic 2",
+        "description": "Redesign landing page",
+        "url": "https://example.com/epic2",
+        "effortDevelopment": 10,
+        "effortAnalysis": 5,
+        "priority": "Medium",
+        "team": "Team B"
+      },
+      {
+        "id": "e3",
+        "title": "Epic 3",
+        "description": "Implement payment gateway",
+        "url": "https://example.com/epic3",
+        "effortDevelopment": 8,
+        "effortAnalysis": 4,
+        "priority": "High",
+        "team": "Team C"
+      }
+    ],
+    "resources": [
+      {
+        "firstName": "John",
+        "lastName": "Doe",
+        "maxCapacity": 10,
+        "role": "developer",
+        "team": "Team A"
+      },
+      {
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "maxCapacity": 10,
+        "role": "analyst",
+        "team": "Team A"
+      },
+      {
+        "firstName": "Michael",
+        "lastName": "Brown",
+        "maxCapacity": 10,
+        "role": "developer",
+        "team": "Team B"
+      },
+      {
+        "firstName": "Emily",
+        "lastName": "Davis",
+        "maxCapacity": 10,
+        "role": "analyst",
+        "team": "Team C"
+      },
+      {
+        "firstName": "Igor",
+        "lastName": "Kovacevic",
+        "maxCapacity": 20,
+        "role": "developer",
+        "team": "Team C"
+      }
+    ]
+  }
