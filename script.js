@@ -57,98 +57,39 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => console.error('Error loading data:', error));
 
-    function loadEpics(epicsData) {
-        const epicsContainer = document.querySelector('.sidebar .epics');
-        epicsContainer.innerHTML = '';
-        epicsData.forEach(epic => {
-            const epicDiv = document.createElement('div');
-            epicDiv.className = 'epic';
-            epicDiv.setAttribute('draggable', true);
-            epicDiv.innerHTML = `
-                <h3>${epic.title}</h3>
-                <p class="description">${epic.description}</p>
-                <a href="${epic.url}" class="url" target="_blank">${epic.url}</a>
-                <div class="estimates">
-                    <span class="analysis-effort" data-epic-id="${epic.id}">Analysis: ${epic.effortAnalysis} days</span>
-                    <span class="development-effort" data-epic-id="${epic.id}">Development: ${epic.effortDevelopment} days</span>
-                    <span>Priority: ${epic.priority}</span>
-                    <span>Team: ${epic.team}</span>
-                </div>
-            `;
-            epicsContainer.appendChild(epicDiv);
 
-            epicDiv.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', epic.id);
+        function loadResources(resourcesData) {
+            const resourcesContainer = document.querySelector('.resources');
+            resourcesContainer.innerHTML = '';
+            resourcesData.forEach(resource => {
+                const fullName = `${resource.firstName} ${resource.lastName}`;
+                const resourceDiv = document.createElement('div');
+                resourceDiv.className = 'resource visible';
+                resourceDiv.dataset.name = fullName;
+                updateResourceCapacity(resourceDiv, resource, []); // Initial load
+                resourcesContainer.appendChild(resourceDiv);
+        
+                resourceDiv.addEventListener('click', () => {
+                    selectResource(fullName);
+                });
             });
-
-            // Click handlers for effort text
-            const analysisSpan = epicDiv.querySelector('.analysis-effort');
-            const developmentSpan = epicDiv.querySelector('.development-effort');
-            analysisSpan.addEventListener('click', () => {
-                const assignedAnalyst = assignments[epic.id]?.analyst;
-                if (assignedAnalyst) {
-                    selectResource(assignedAnalyst);
-                }
+        
+            const searchInput = document.getElementById('resource-search');
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const resources = document.querySelectorAll('.resource');
+                resources.forEach(resource => {
+                    const name = resource.querySelector('h4').textContent.toLowerCase();
+                    if (name.includes(searchTerm)) {
+                        resource.classList.remove('hidden');
+                        resource.classList.add('visible');
+                    } else {
+                        resource.classList.remove('visible');
+                        resource.classList.add('hidden');
+                    }
+                });
             });
-            developmentSpan.addEventListener('click', () => {
-                const assignedDeveloper = assignments[epic.id]?.developer;
-                if (assignedDeveloper) {
-                    selectResource(assignedDeveloper);
-                }
-            });
-
-            updateEpicEffortStyles(epic.id, epicDiv);
-        });
-    }
-
-    function loadResources(resourcesData) {
-        const resourcesContainer = document.querySelector('.resources');
-        resourcesContainer.innerHTML = '';
-        resourcesData.forEach(resource => {
-            const fullName = `${resource.firstName} ${resource.lastName}`;
-            const resourceDiv = document.createElement('div');
-            resourceDiv.className = 'resource visible';
-            resourceDiv.dataset.name = fullName;
-            updateResourceCapacity(resourceDiv, resource, []); // Initial load
-            resourcesContainer.appendChild(resourceDiv);
-
-            resourceDiv.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                resourceDiv.classList.add('drag-over');
-            });
-            resourceDiv.addEventListener('dragleave', () => {
-                resourceDiv.classList.remove('drag-over');
-            });
-            resourceDiv.addEventListener('drop', (e) => {
-                e.preventDefault();
-                resourceDiv.classList.remove('drag-over');
-                const epicId = e.dataTransfer.getData('text/plain');
-                assignEpic(epicId, fullName, resource.role);
-                selectResource(fullName);
-                loadTeams(epicData, resourceData);
-            });
-
-            resourceDiv.addEventListener('click', () => {
-                selectResource(fullName);
-            });
-        });
-
-        const searchInput = document.getElementById('resource-search');
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const resources = document.querySelectorAll('.resource');
-            resources.forEach(resource => {
-                const name = resource.querySelector('h4').textContent.toLowerCase();
-                if (name.includes(searchTerm)) {
-                    resource.classList.remove('hidden');
-                    resource.classList.add('visible');
-                } else {
-                    resource.classList.remove('visible');
-                    resource.classList.add('hidden');
-                }
-            });
-        });
-    }
+        }
 
     function loadTeams(epicsData, resourcesData) {
         const teamsContainer = document.querySelector('.teams');
@@ -186,90 +127,228 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateResourceCapacity(resourceDiv, resource, assignedEpics) {
-        const fullName = `${resource.firstName} ${resource.lastName}`;
-        let totalAssigned = 0;
-        assignedEpics.forEach(epicId => {
-            const epic = epicData.find(e => e.id === epicId);
-            if (epic) {
-                totalAssigned += resource.role === 'developer' ? epic.effortDevelopment : epic.effortAnalysis;
-            }
-        });
-        const maxCapacity = resource.maxCapacity;
-        const available = Math.max(0, maxCapacity - totalAssigned);
-        const capacityPercentage = Math.min((totalAssigned / maxCapacity) * 100, 100);
-        const remainingPercentage = 100 - capacityPercentage;
 
-        // Determine loading bar color based on remaining capacity
-        let colorClass = 'green';
-        if (remainingPercentage < 10) {
-            colorClass = 'red';
-        } else if (remainingPercentage <= 30) {
-            colorClass = 'orange';
-        }
+let currentDraggedEpic = null;
 
-        resourceDiv.innerHTML = `
-            <h4>${fullName} (${resource.role})</h4>
-            <div class="capacity">
-                <div class="loading-bar ${colorClass}" style="width: ${capacityPercentage}%;"></div>
+function loadEpics(epicsData) {
+    const epicsContainer = document.querySelector('.sidebar .epics');
+    epicsContainer.innerHTML = '';
+    epicsData.forEach(epic => {
+        const epicDiv = document.createElement('div');
+        epicDiv.className = 'epic';
+        epicDiv.setAttribute('draggable', true);
+        epicDiv.innerHTML = `
+            <h3>${epic.title}</h3>
+            <p class="description">${epic.description}</p>
+            <a href="${epic.url}" class="url" target="_blank">${epic.url}</a>
+            <div class="estimates">
+                <span class="analysis-effort" data-epic-id="${epic.id}">Analysis: ${epic.effortAnalysis} days</span>
+                <span class="development-effort" data-epic-id="${epic.id}">Development: ${epic.effortDevelopment} days</span>
+                <span>Priority: ${epic.priority}</span>
+                <span>Team: ${epic.team}</span>
             </div>
-            <p>Assigned: ${totalAssigned} days | Available: ${available} days | Team: ${resource.team}</p>
         `;
-    }
+        epicsContainer.appendChild(epicDiv);
 
-    function assignEpic(epicId, resourceName, role) {
-        if (!assignments[epicId]) assignments[epicId] = {};
-        const resource = resourceData.find(r => `${r.firstName} ${r.lastName}` === resourceName);
-        if (role === 'developer' && !assignments[epicId].developer) {
-            assignments[epicId].developer = resourceName;
-        } else if (role === 'analyst' && !assignments[epicId].analyst) {
-            assignments[epicId].analyst = resourceName;
-        }
-        const sidebarEpic = Array.from(document.querySelectorAll('.sidebar .epic')).find(epic => 
-            epic.querySelector('h3').textContent === getEpicTitleById(epicId));
-        if (sidebarEpic) {
-            sidebarEpic.classList.add('assigned');
-            updateEpicEffortStyles(epicId, sidebarEpic);
-        }
-        updateAllResourceCapacities();
-        saveAssignments();
-    }
+        epicDiv.addEventListener('dragstart', (e) => {
+            currentDraggedEpic = epic; // Store the entire epic object
+            console.log('Dragstart - Epic:', epic.id, 'Role:', epicDiv.dataset.role || 'developer'); // Debug
+            epicDiv.classList.add('dragging');
+            const dragGhost = epicDiv.cloneNode(true);
+            dragGhost.style.opacity = '0.1';
+            dragGhost.style.position = 'absolute';
+            dragGhost.style.top = '-1000px';
+            document.body.appendChild(dragGhost);
+            e.dataTransfer.setDragImage(dragGhost, 0, 0);
+            setTimeout(() => document.body.removeChild(dragGhost), 0);
+        });
 
-    function removeAssignment(epicId, role) {
-        if (!assignments[epicId]) return;
-        const resourceName = assignments[epicId][role];
-        delete assignments[epicId][role];
-        if (!assignments[epicId].developer && !assignments[epicId].analyst) {
-            delete assignments[epicId];
-        }
-        const sidebarEpic = Array.from(document.querySelectorAll('.sidebar .epic')).find(epic => 
-            epic.querySelector('h3').textContent === getEpicTitleById(epicId));
-        if (sidebarEpic) {
-            if (!assignments[epicId]) sidebarEpic.classList.remove('assigned');
-            updateEpicEffortStyles(epicId, sidebarEpic);
-        }
-        if (resourceName) {
-            const selectedResource = document.querySelector('.resource.selected');
-            if (selectedResource && selectedResource.dataset.name === resourceName) {
-                showResourceDetails(resourceName);
+        epicDiv.addEventListener('dragend', (e) => {
+            epicDiv.classList.remove('dragging');
+            currentDraggedEpic = null; // Clear when drag ends
+        });
+
+        const analysisSpan = epicDiv.querySelector('.analysis-effort');
+        const developmentSpan = epicDiv.querySelector('.development-effort');
+        analysisSpan.addEventListener('click', () => {
+            const assignedAnalyst = assignments[epic.id]?.analyst;
+            if (assignedAnalyst) {
+                selectResource(assignedAnalyst);
+            }
+            epicDiv.dataset.role = 'analyst'; // Track role for effort
+        });
+        developmentSpan.addEventListener('click', () => {
+            const assignedDeveloper = assignments[epic.id]?.developer;
+            if (assignedDeveloper) {
+                selectResource(assignedDeveloper);
+            }
+            epicDiv.dataset.role = 'developer'; // Track role for effort
+        });
+
+        updateEpicEffortStyles(epic.id, epicDiv);
+    });
+}
+
+function updateResourceCapacity(resourceDiv, resource, assignedEpics) {
+    const fullName = `${resource.firstName} ${resource.lastName}`;
+    const maxCapacity = 65; // 65 days in the quarter
+    let dayAssignments = new Array(maxCapacity).fill(false); // Track assigned days
+    const startDate = new Date('2025-01-01'); // Start of Q1 2025 (adjust as needed)
+
+    assignedEpics.forEach(epicId => {
+        const epic = epicData.find(e => e.id === epicId);
+        if (epic && epic.startDay !== undefined) {
+            const effort = resource.role === 'developer' ? epic.effortDevelopment : epic.effortAnalysis;
+            for (let i = epic.startDay; i < epic.startDay + effort && i < maxCapacity; i++) {
+                dayAssignments[i] = true;
             }
         }
-        updateAllResourceCapacities();
-        loadTeams(epicData, resourceData);
-        saveAssignments(); // Save to localStorage after removal
-    }
+    });
 
-    function updateAllResourceCapacities() {
-        const resources = document.querySelectorAll('.resource');
-        resources.forEach(resourceDiv => {
-            const resourceName = resourceDiv.dataset.name;
-            const resource = resourceData.find(r => `${r.firstName} ${r.lastName}` === resourceName);
-            const assignedEpics = Object.entries(assignments)
-                .filter(([_, roles]) => roles.developer === resourceName || roles.analyst === resourceName)
-                .map(([epicId]) => epicId);
-            updateResourceCapacity(resourceDiv, resource, assignedEpics);
-        });
+    const totalAssigned = dayAssignments.filter(Boolean).length;
+    const available = maxCapacity - totalAssigned;
+
+    let capacityHTML = '<div class="capacity">';
+    for (let i = 0; i < maxCapacity; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        const dateString = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        capacityHTML += `
+            <div class="day-bar${dayAssignments[i] ? ' assigned' : ''}" data-day="${i}">
+                <span class="tooltip">${dateString}</span>
+            </div>`;
     }
+    capacityHTML += '</div>';
+
+    resourceDiv.innerHTML = `
+        <h4>${fullName} (${resource.role})</h4>
+        ${capacityHTML}
+        <p>Assigned: ${totalAssigned} days | Available: ${available} days | Team: ${resource.team}</p>
+    `;
+
+    const dayBars = resourceDiv.querySelectorAll('.day-bar');
+    dayBars.forEach(dayBar => {
+        dayBar.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dayBar.classList.add('drag-over');
+            const startDay = parseInt(dayBar.dataset.day);
+            if (currentDraggedEpic) {
+                const effort = resource.role === 'developer' ? currentDraggedEpic.effortDevelopment : currentDraggedEpic.effortAnalysis;
+                console.log('Dragover - Epic:', currentDraggedEpic.id, 'Effort:', effort, 'Start Day:', startDay); // Debug
+
+                // Highlight subsequent days using nextElementSibling
+                let currentBar = dayBar;
+                for (let i = 1; i < effort && currentBar && startDay + i < maxCapacity; i++) {
+                    currentBar = currentBar.nextElementSibling;
+                    if (currentBar) {
+                        currentBar.classList.add('will-be-assigned');
+                    }
+                }
+            }
+        });
+
+        dayBar.addEventListener('dragleave', (e) => {
+            dayBar.classList.remove('drag-over');
+            let currentBar = dayBar;
+            for (let i = 1; i < maxCapacity - parseInt(dayBar.dataset.day) && currentBar; i++) {
+                currentBar = currentBar.nextElementSibling;
+                if (currentBar) {
+                    currentBar.classList.remove('will-be-assigned');
+                } else {
+                    break;
+                }
+            }
+        });
+
+        dayBar.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dayBar.classList.remove('drag-over');
+            let currentBar = dayBar;
+            for (let i = 1; i < maxCapacity - parseInt(dayBar.dataset.day) && currentBar; i++) {
+                currentBar = currentBar.nextElementSibling;
+                if (currentBar) {
+                    currentBar.classList.remove('will-be-assigned');
+                } else {
+                    break;
+                }
+            }
+            if (currentDraggedEpic) {
+                const epicId = currentDraggedEpic.id;
+                const startDay = parseInt(dayBar.dataset.day);
+                console.log('Drop - Epic:', epicId, 'Start Day:', startDay); // Debug
+                assignEpic(epicId, fullName, resource.role, startDay);
+                selectResource(fullName);
+                loadTeams(epicData, resourceData);
+            } else {
+                console.error('No epic being dragged during drop');
+            }
+        });
+    });
+}
+// Update assignEpic function to include startDay
+function assignEpic(epicId, resourceName, role, startDay) {
+    if (!assignments[epicId]) assignments[epicId] = {};
+    const resource = resourceData.find(r => `${r.firstName} ${r.lastName}` === resourceName);
+    if (role === 'developer' && !assignments[epicId].developer) {
+        assignments[epicId].developer = resourceName;
+        assignments[epicId].developerStartDay = startDay;
+    } else if (role === 'analyst' && !assignments[epicId].analyst) {
+        assignments[epicId].analyst = resourceName;
+        assignments[epicId].analystStartDay = startDay;
+    }
+    const epic = epicData.find(e => e.id === epicId);
+    epic.startDay = role === 'developer' ? assignments[epicId].developerStartDay : assignments[epicId].analystStartDay;
+    const sidebarEpic = Array.from(document.querySelectorAll('.sidebar .epic')).find(epic => 
+        epic.querySelector('h3').textContent === getEpicTitleById(epicId));
+    if (sidebarEpic) {
+        sidebarEpic.classList.add('assigned');
+        updateEpicEffortStyles(epicId, sidebarEpic);
+    }
+    updateAllResourceCapacities();
+    saveAssignments();
+}
+
+// Update removeAssignment function to handle startDay
+function removeAssignment(epicId, role) {
+    if (!assignments[epicId]) return;
+    const resourceName = assignments[epicId][role];
+    delete assignments[epicId][role];
+    delete assignments[epicId][role === 'developer' ? 'developerStartDay' : 'analystStartDay'];
+    const epic = epicData.find(e => e.id === epicId);
+    if (epic && !assignments[epicId]?.developer && !assignments[epicId]?.analyst) {
+        delete epic.startDay;
+    }
+    if (!assignments[epicId].developer && !assignments[epicId].analyst) {
+        delete assignments[epicId];
+    }
+    const sidebarEpic = Array.from(document.querySelectorAll('.sidebar .epic')).find(epic => 
+        epic.querySelector('h3').textContent === getEpicTitleById(epicId));
+    if (sidebarEpic) {
+        if (!assignments[epicId]) sidebarEpic.classList.remove('assigned');
+        updateEpicEffortStyles(epicId, sidebarEpic);
+    }
+    if (resourceName) {
+        const selectedResource = document.querySelector('.resource.selected');
+        if (selectedResource && selectedResource.dataset.name === resourceName) {
+            showResourceDetails(resourceName);
+        }
+    }
+    updateAllResourceCapacities();
+    loadTeams(epicData, resourceData);
+    saveAssignments();
+}
+// Update updateAllResourceCapacities function
+function updateAllResourceCapacities() {
+    const resources = document.querySelectorAll('.resource');
+    resources.forEach(resourceDiv => {
+        const resourceName = resourceDiv.dataset.name;
+        const resource = resourceData.find(r => `${r.firstName} ${r.lastName}` === resourceName);
+        const assignedEpics = Object.entries(assignments)
+            .filter(([_, roles]) => roles.developer === resourceName || roles.analyst === resourceName)
+            .map(([epicId]) => epicId);
+        updateResourceCapacity(resourceDiv, resource, assignedEpics);
+    });
+}
 
     function selectResource(name) {
         document.querySelectorAll('.resource').forEach(resource => {
